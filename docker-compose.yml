@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cardtoshaba-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cardtoshaba
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d cardtoshaba"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cardtoshaba-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cardtoshaba-backend
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      SERVER_PORT: 8080
+      ENVIRONMENT: production
+      LOG_LEVEL: info
+
+      ZARINHUB_BASE_URL: ${ZARINHUB_BASE_URL}
+      ZARINHUB_API_USERNAME: ${ZARINHUB_API_USERNAME}
+      ZARINHUB_API_PASSWORD: ${ZARINHUB_API_PASSWORD}
+      ZARINHUB_APPLICATION_NAME: ${ZARINHUB_APPLICATION_NAME}
+      ZARINHUB_TIMEOUT: 15s
+
+      DATABASE_URL: postgres://user:pass@postgres:5432/cardtoshaba?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - cardtoshaba-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  cardtoshaba-network:
+    driver: bridge

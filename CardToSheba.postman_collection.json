@@ -1,0 +1,834 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Card to Sheba API",
+    "description": "Collection for testing Card-to-Sheba conversion service with ZarinHub integration.\n\n**Base URL:** `{{base_url}}`\n\n**Endpoints:**\n- `POST /api/v1/convert` - Convert card number to Sheba\n- `GET /healthz` - Health check\n\n**Error Codes:**\n- `INVALID_CARD_NUMBER` (400)\n- `EMPTY_CARD_NUMBER` (400)\n- `INVALID_CARD_FORMAT` (400)\n- `INVALID_JSON` (400)\n- `UNAUTHORIZED` (401)\n- `ZARINHUB_REJECTED` (422)\n- `ZARINHUB_TIMEOUT` (504)\n- `ZARINHUB_UNAVAILABLE` (503)\n- `INTERNAL_ERROR` (500)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has status field\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData.status).to.eql('ok');",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is less than 500ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Type is JSON\", function () {",
+                  "    pm.response.to.have.header('Content-Type');",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/healthz",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            },
+            "description": "Check if the service is running and healthy."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Convert",
+      "item": [
+        {
+          "name": "Convert - Success (Valid Card)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has sheba field\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('sheba');",
+                  "    pm.expect(jsonData.sheba).to.be.a('string');",
+                  "    pm.expect(jsonData.sheba).to.match(/^IR[0-9]{24}$/);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has request_id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('request_id');",
+                  "    pm.expect(jsonData.request_id).to.be.a('string');",
+                  "    pm.expect(jsonData.request_id).to.not.be.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is less than 15s\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(15000);",
+                  "});",
+                  "",
+                  "// ذخیره request_id برای استفاده در تست‌های بعدی",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('last_request_id', jsonData.request_id);",
+                  "    pm.collectionVariables.set('last_sheba', jsonData.sheba);",
+                  "    console.log('Saved request_id:', jsonData.request_id);",
+                  "    console.log('Saved sheba:', jsonData.sheba);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"{{valid_card_number}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Convert a valid card number to Sheba. Expected: 200 with sheba and request_id."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Success (With Dashes)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Card with dashes is accepted\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('sheba');",
+                  "    pm.expect(jsonData.sheba).to.match(/^IR[0-9]{24}$/);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"6037-9912-3456-7890\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Test that card numbers with dashes are cleaned and accepted."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Empty Card Number)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is EMPTY_CARD_NUMBER\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error).to.have.property('code');",
+                  "    pm.expect(jsonData.error.code).to.eql('EMPTY_CARD_NUMBER');",
+                  "});",
+                  "",
+                  "pm.test(\"Error message is present\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.have.property('message');",
+                  "    pm.expect(jsonData.error.message).to.be.a('string');",
+                  "    pm.expect(jsonData.error.message).to.not.be.empty;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has request_id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.have.property('request_id');",
+                  "});",
+                  "",
+                  "pm.test(\"No card number in response\", function () {",
+                  "    const rawBody = pm.response.text();",
+                  "    pm.expect(rawBody).to.not.include('6037');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Empty card number should return 400 with EMPTY_CARD_NUMBER."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Invalid Format - Too Short)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is INVALID_CARD_FORMAT\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_CARD_FORMAT');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Card number shorter than 16 digits should return INVALID_CARD_FORMAT."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Invalid Format - Non-numeric)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is INVALID_CARD_FORMAT\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_CARD_FORMAT');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"6037abcd12345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Non-numeric characters should return INVALID_CARD_FORMAT."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Luhn Check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is INVALID_CARD_NUMBER\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_CARD_NUMBER');",
+                  "});",
+                  "",
+                  "pm.test(\"Luhn validation failed\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.message).to.include('Ù…Ø¹ØªØ¨Ø±');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"1234567890123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Card number failing Luhn algorithm should return INVALID_CARD_NUMBER."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Invalid JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error code is INVALID_JSON\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_JSON');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{invalid json}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Malformed JSON should return INVALID_JSON."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Missing Field)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error indicates missing card number\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error.code).to.be.oneOf(['EMPTY_CARD_NUMBER', 'INVALID_CARD_FORMAT']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Missing card_number field should return a validation error."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Wrong Content-Type)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 4xx or 5xx\", function () {",
+                  "    pm.expect(pm.response.code).to.be.at.least(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "card_number=6037991234567890"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Wrong content-type should be handled gracefully."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Fail (Unsupported Method)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 405 or 404\", function () {",
+                  "    pm.expect([404, 405]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "GET on POST endpoint should return 405 or 404."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Security",
+      "item": [
+        {
+          "name": "Security - Response Has No Full Card Number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response does not contain full card number\", function () {",
+                  "    const rawBody = pm.response.text();",
+                  "    pm.expect(rawBody).to.not.include('{{valid_card_number}}');",
+                  "});",
+                  "",
+                  "pm.test(\"Response does not contain API key\", function () {",
+                  "    const rawBody = pm.response.text();",
+                  "    pm.expect(rawBody).to.not.include('Bearer');",
+                  "    pm.expect(rawBody).to.not.include('api_key');",
+                  "    pm.expect(rawBody).to.not.include('apiKey');",
+                  "});",
+                  "",
+                  "pm.test(\"Response does not contain stack trace\", function () {",
+                  "    const rawBody = pm.response.text();",
+                  "    pm.expect(rawBody).to.not.include('goroutine');",
+                  "    pm.expect(rawBody).to.not.include('.go:');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"{{valid_card_number}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Verify that sensitive data is not leaked in the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Security - Response Has request_id Header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"X-Request-ID header is present\", function () {",
+                  "    pm.expect(pm.response.headers.has('X-Request-ID')).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"X-Request-ID is a valid UUID\", function () {",
+                  "    const requestId = pm.response.headers.get('X-Request-ID');",
+                  "    pm.expect(requestId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"{{valid_card_number}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Verify that X-Request-ID header is present and is a valid UUID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Performance",
+      "item": [
+        {
+          "name": "Performance - Response Time Under 15s",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Response time is less than 15 seconds\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(15000);",
+                  "});",
+                  "",
+                  "pm.test(\"Response time is logged\", function () {",
+                  "    console.log('Response time:', pm.response.responseTime, 'ms');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"card_number\": \"{{valid_card_number}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/convert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "convert"
+              ]
+            },
+            "description": "Ensure the endpoint responds within acceptable time."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// تنظیم هدرهای پیش‌فرض",
+          "pm.request.headers.add({",
+          "    key: 'X-Postman-Request-ID',",
+          "    value: pm.variables.replaceIn('{{$guid}}')",
+          "});"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// بررسی هدرهای امنیتی روی همه درخواست‌ها",
+          "pm.test(\"Response has Content-Type JSON\", function () {",
+          "    if (pm.response.code !== 0) {",
+          "        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "    }",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "valid_card_number",
+      "value": "6037991234567890",
+      "type": "string"
+    },
+    {
+      "key": "last_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "last_sheba",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

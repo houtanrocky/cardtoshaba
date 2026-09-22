@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea
+.vscode
+*.swp
+
+# Build artifacts
+cardtoshaba
+server
+*.exe
+
+# Test
+*.test
+coverage.out
+coverage.html
+
+# Docs
+README.md
+*.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data
+pgdata/
+logs/
